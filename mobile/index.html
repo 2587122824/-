@@ -1,0 +1,252 @@
+</head>
+<style type="">
+	*{
+		margin: 0;
+		padding: 0;
+	}
+	html,body{
+		height: 100%;
+		overflow: hidden;
+	}
+	#wrap{
+		height: 100%;
+		overflow: hidden;
+	}
+	.carousel-wrap{position: relative;overflow: hidden;}
+	.carousel-wrap>.list{
+		list-style: none;
+		overflow: hidden;
+		
+	}
+	.carousel-wrap>.list>li>a;.carousel-wrap>.list>li>a>img{display: block;}
+	.carousel-wrap>.list>li>a>img{width: 100%}
+	.carousel-wrap>.list>li{float: left;}
+
+	.carousel-wrap>.points>span{display:inline-block;width:10px;height: 10px;background-color: white;border-radius: 50%;margin-left:5px;} 
+	.carousel-wrap>.points>span.active{background-color: red;}
+
+</style>
+<body>
+	<div id="wrap">
+		<div class="carousel-wrap">
+			<div class="points"></div>
+		</div>
+		<div id="test"></div>
+	</div>
+
+</body>
+
+<script type="text/javascript">
+	
+
+	
+	window.onload=function(){
+		/*
+			1.meta标签
+			2.全面禁止事件的默认行为
+			3.一个适配方案
+		*/
+
+		//禁止浏览器的默认行为
+		document.addEventListener('touchstart',function(ev){
+			ev=ev||event;
+			ev.preventDefault();
+		},{ passive: false })
+		//轮播图
+		var arr=["img/01.jpg","img/02.jpg","img/03.jpg","img/04.jpg","img/05.jpg"]
+		carousel(arr);
+		function carousel(arr){
+			//两个重复的ul拼在一起
+			//点击第一个跳到第二个ul的第一个
+			//点击第二个的最后一个时到到第一个的最后一个
+			pl=arr.length;//用户看到的数量
+			arr=arr.concat(arr);//无缝滑屏实际的数量（*2）
+
+			var carouselWrap=document.querySelector(".carousel-wrap");
+			if(carouselWrap){
+				//布局
+				var ulNode=document.createElement("ul");
+				ulNode.classList="list";	
+				for (var i = 0; i < arr.length; i++) {
+					ulNode.innerHTML+='<li><a href="javascript:;"><img src='+arr[i]+'></a></li>'	
+				}
+				
+				var styleNode=document.createElement("style");
+				styleNode.innerHTML=".carousel-wrap>.list{width:"+arr.length+"00%;}.carousel-wrap>.list>li{width:"+(1/arr.length*100)+"%;}"
+				carouselWrap.appendChild(ulNode);	
+				document.head.appendChild(styleNode);
+
+				setTimeout(function(){
+					var img=document.querySelector("img");
+					carouselWrap.style.height=img.offsetHeight+"px";
+				},100);
+
+
+				//小圆点
+				var points=document.querySelector(".carousel-wrap>.points");
+				if(points){
+					for (var i = 0; i < pl; i++) {
+					points.innerHTML+="<span></span>"	
+					}
+					
+					points.style.position="absolute";
+
+					var pointstyle=document.createElement("style");
+					var pointsposition=carouselWrap.offsetWidth/2-points.offsetWidth/2;
+					pointstyle.innerHTML='.carousel-wrap>.points{bottom: 0;left:'+pointsposition+'px;z-index: 1;text-align:center}'
+					document.head.appendChild(pointstyle);
+					var pointList=document.querySelectorAll(".carousel-wrap>.points>span");
+					pointList[0].classList="active";
+			 	}
+				//滑屏
+				/*
+					1,获取手指一开始的位置
+					2，获取元素的位置
+					3，元素移动的距离=手指移动的距离
+				*/
+				
+				var startX=0;//手指开始的位置
+				var listX=0;//ul的偏移量
+				var index=0;
+				var timer;
+				carouselWrap.addEventListener("touchstart",function(ev){
+					clearInterval(timer);//取消自动轮播
+					ev=ev||event;
+					//第一个手指
+					var finger=ev.changedTouches[0];
+					startX=	finger.clientX;
+					ulNode.style.transition="none";
+					//无缝滑屏逻辑开始
+					if(index==0){
+						listX=-pl*carouselWrap.offsetWidth;
+						ulNode.style.transition='translateX('+listX+'px)';
+						index=pl;
+						
+					}
+					if(index==arr.length-1){
+						ulNode.style.transition='translateX(0px)';
+						index=pl-1;
+						listX=-index*carouselWrap.offsetWidth;
+						
+					}
+					//无缝滑屏逻辑结束
+				})
+				carouselWrap.addEventListener("touchmove",function(ev){
+					ev=ev||event;
+					var finger=ev.changedTouches[0];
+					//手指移动的距离
+					var x=finger.clientX-startX;
+					moveX=listX+x;
+					ulNode.style.transform='translateX('+moveX+'px)';
+				})
+				carouselWrap.addEventListener("touchend",function(ev){
+					ev=ev||event;
+					var finger=ev.changedTouches[0];
+					var x=finger.clientX-startX;
+					var moveX=carouselWrap.offsetWidth;
+					if(x!=0){
+						if(x>0){
+							//往右滑
+							if(x>=moveX/3){
+								x=moveX;
+								index--;
+							}
+							else{
+								x=0; 
+							}
+						}
+						else{
+							//往左滑
+							if(x<=moveX/3){
+								x=-moveX;
+								index++;
+							}
+							else{
+								x=0;
+							}
+						}
+					}
+					if(index<0){
+						x=0;
+						index++;
+					}
+					if(index>=arr.length){	
+						x=0;
+						index--;
+					}	
+					moveX=listX+x;
+					ulNode.style.transform='translateX('+moveX+'px)';
+					
+					ulNode.style.transition="0.5s";
+					for(var i in pointList){
+						pointList[i].classList="";	
+					}
+					//小圆点的下标和图片下标的转换
+					var pointindex=0;
+					if(index>=pl){
+						pointindex=index-pl;	 
+					}
+					else{
+						pointindex=index;
+					}	
+					pointList[pointindex].classList="active";
+					listX+=x;
+					//开启自动轮播
+					// timer=setInterval(auto,2000);
+				})
+				//自动轮播
+				// timer=setInterval(auto,2000);
+				// function auto(){
+				// 	ulNode.style.transition="none";
+				// 	if(index==0){
+				// 		listX=-pl*carouselWrap.offsetWidth;
+				// 		ulNode.style.transition='translateX('+listX+'px)';
+				// 		index=pl;
+						
+				// 	}
+				// 	if(index==arr.length){
+				// 		ulNode.style.transition='translateX(0px)';
+				// 		index=pl-1;
+				// 		listX=-index*carouselWrap.offsetWidth;
+						
+				// 	}
+				// 	ulNode.style.transition="1s";
+				// 	var dis=listX-carouselWrap.offsetWidth;
+				// 	ulNode.style.transform='translateX('+dis+'px)';
+						
+				// 	listX=-index*carouselWrap.offsetWidth;
+
+				// 	for(var i in pointList){
+				// 		pointList[i].classList="";	
+				// 	}
+
+				// 	var pointindex=0;
+				// 	if(index>=pl){
+				// 		pointindex=index-pl;	 
+				// 	}
+				// 	else{
+				// 		pointindex=index;
+				// 	}	
+				// 	pointList[pointindex].classList="active";
+				// 	index++;
+
+				// }
+
+			}
+
+		}
+		
+
+
+
+		//适配不同浏览器的字体大小		
+		;(function(){
+			var styleNode=document.createElement('style');
+			let w=document.documentElement.clientWidth/16;
+			styleNode.innerHTML='html{font-size:'+w+'px!important}';
+			document.head.appendChild(styleNode);
+		})();
+		//meta标签写法：<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+	}
+</script>
+</html>
